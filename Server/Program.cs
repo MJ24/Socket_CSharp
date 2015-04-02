@@ -61,15 +61,32 @@ namespace Server
             while (true)
             {
                 byte[] buffer = new byte[1024 * 1024 * 2];
-                int realReceived = socketSend.Receive(buffer);
-                //如果实际接受为0则对方已退出本次Socket连接，不再循环接受请求
-                if (realReceived == 0)
+                try
                 {
+                    int realReceived = socketSend.Receive(buffer);
+                    //因为对方退出也会再发一次空的请求过来？
+                    //如果实际接受为0则对方已退出本次Socket连接，不再循环接受请求
+                    if (realReceived == 0)
+                    {
+                        break;
+                    }
+                    //注意GetString(buffer, 0, realReceived)
+                    string msg = Encoding.UTF8.GetString(buffer, 0, realReceived);
+                    if (msg.Equals("AFK"))
+                    {
+                        Console.WriteLine(socketSend.RemoteEndPoint.ToString() + " 已下线");
+                        break;
+                    }
+                    Console.WriteLine(socketSend.RemoteEndPoint.ToString() + ": " + msg);
+                }
+                catch (Exception ex)
+                {
+                    if (ex.Message.Contains("An existing connection was forcibly closed by the remote host"))
+                    {
+                        Console.WriteLine("客户端：{0} 异常退出", socketSend.RemoteEndPoint.ToString());
+                    }
                     break;
                 }
-                //注意GetString(buffer, 0, realReceived)
-                string msg = Encoding.UTF8.GetString(buffer, 0, realReceived);
-                Console.WriteLine(socketSend.RemoteEndPoint.ToString() + ": " + msg);
             }
         }
     }
