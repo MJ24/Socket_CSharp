@@ -11,6 +11,7 @@ namespace Server
 {
     class Program
     {
+        //测试请求：telnet 127.0.0.1 2424
         static void Main(string[] args)
         {
             //1，服务器端创建一个负责监IP地址跟端口号的Socket
@@ -32,8 +33,6 @@ namespace Server
             acceptThread.IsBackground = true;
             acceptThread.Start(socketWatch);
             Console.ReadLine();
-
-            //测试请求：telnet 127.0.0.1 2424
         }
 
         //参数声明为object类型是因为把带参函数给线程时，要求参数必须是object的
@@ -46,8 +45,31 @@ namespace Server
                 //socketWatch.Accept返回负责跟客户端通信的Socket——socketSend
                 //在while (true)里即为每一个客户端都创建一个与之通信的Socket
                 Socket socketSend = socketWatch.Accept();
-                //192.168.11.78：连接成功
+                //127.0.0.1：连接成功
                 Console.WriteLine(socketSend.RemoteEndPoint.ToString() + ": 连接成功");
+
+                Thread receiveThread = new Thread(ReceiveRequest);
+                receiveThread.IsBackground = true;
+                receiveThread.Start(socketSend);
+            }
+        }
+
+        //循环接受客户端请求
+        private static void ReceiveRequest(object socket)
+        {
+            Socket socketSend = socket as Socket;
+            while (true)
+            {
+                byte[] buffer = new byte[1024 * 1024 * 2];
+                int realReceived = socketSend.Receive(buffer);
+                //如果实际接受为0则对方已退出本次Socket连接，不再循环接受请求
+                if (realReceived == 0)
+                {
+                    break;
+                }
+                //注意GetString(buffer, 0, realReceived)
+                string msg = Encoding.UTF8.GetString(buffer, 0, realReceived);
+                Console.WriteLine(socketSend.RemoteEndPoint.ToString() + ": " + msg);
             }
         }
     }
